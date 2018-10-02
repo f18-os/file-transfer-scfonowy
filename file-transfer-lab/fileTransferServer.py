@@ -23,17 +23,16 @@ lsock.bind(bindAddr)
 lsock.listen(5)
 print("listening on:", bindAddr)
 
-sock, addr = lsock.accept()
+sock, addr = lsock.accept() # TODO: fork on new connection
 
 print("connection rec'd from", addr)
 
 
-from framedSock import framedSend, framedReceive
+from fileTransferSocket import framedSend, framedReceive
 
 while True:
     payload = framedReceive(sock, debug)
     if debug: print("rec'd: ", payload)
     if not payload:
         break
-    payload += b"!"             # make emphatic!
     framedSend(sock, payload, debug)
