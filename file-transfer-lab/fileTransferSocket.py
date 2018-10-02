@@ -10,7 +10,8 @@ class FileReceiveState(Enum):
     COMPLETE = 5
     ERROR = 4
 
-class ReceiveState(Enum):
+# enum for what state we're in when receiving a message
+class MessageReceiveState(Enum):
     LENGTH = 1
     PAYLOAD = 2
     COMPLETE = 3
@@ -27,42 +28,45 @@ rbuf = b""                      # static receive buffer
 
 def framedReceive(sock, debug=0):
     global rbuf
-    state = ReceiveState.LENGTH
+    state = MessageReceiveState.LENGTH
     payload = None
     msgLength = -1
 
-    while state != ReceiveState.COMPLETE and state != ReceiveState.ERROR: # check for terminal states
-        if (state == ReceiveState.LENGTH):
+    while state != MessageReceiveState.COMPLETE and state != MessageReceiveState.ERROR: # check for terminal states
+        r = sock.recv(100) # read part of message and update buffer
+        rbuf += r
+
+        if (state == MessageReceiveState.LENGTH): # parse length
             match = re.match(b'([^:]+):(.*)', rbuf) # look for colon
             if match:
                 lengthStr, rbuf = match.groups()
+
                 try: 
                     msgLength = int(lengthStr)
-                    state = ReceiveState.PAYLOAD
+                    state = MessageReceiveState.PAYLOAD
                 except:
+                    state = MessageReceiveState.ERROR
                     if len(rbuf):
                         print("badly formed message length:", lengthStr)
-                        state = ReceiveState.ERROR
+        
 
-        if state == ReceiveState.PAYLOAD:
-            if len(rbuf) >= msgLength:
+        if state == MessageReceiveState.PAYLOAD: # check if payload is complete
+            if len(rbuf) >= msgLength: # truncate message
                 payload = rbuf[0:msgLength]
                 rbuf = rbuf[msgLength:]
-                state = ReceiveState.COMPLETE
-        r = sock.recv(100)
-        rbuf += r
+                state = MessageReceiveState.COMPLETE
 
-        # error/zero length cases
-        if len(r) == 0:
+        # error/zero length case
+        if not r or len(r) == 0:
+            state = MessageReceiveState.ERROR
             if len(rbuf) != 0:
                 print("FramedReceive: incomplete message. \n  state=%s, length=%d, rbuf=%s" % (state, msgLength, rbuf))
             payload = None # don't return potentially partial message
-            state = ReceiveState.ERROR
 
         if debug:
             print("FramedReceive: state=%s, length=%d, rbuf=%s" % (state, msgLength, rbuf))
 
-    return payload # 
+    return payload
 
 def fileSend(sock, file, debug=0):
     # TODO: get file name & length & send
