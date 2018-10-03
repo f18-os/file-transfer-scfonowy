@@ -1,13 +1,11 @@
-import re
+import re, os
 from enum import Enum
 
 # enum for what state we're in when receiving a file
 class FileReceiveState(Enum):
-    NAME_LENGTH = 1
-    NAME_PAYLOAD = 2
-    FILE_LENGTH = 3
-    FILE_PAYLOAD = 4
-    COMPLETE = 5
+    NAME = 1
+    FILE = 2
+    COMPLETE = 3
     ERROR = 4
 
 # enum for what state we're in when receiving a message
@@ -37,7 +35,7 @@ def framedReceive(sock, debug=0):
         rbuf += r
 
         if (state == MessageReceiveState.LENGTH): # parse length
-            match = re.match(b'([^:]+):(.*)', rbuf) # look for colon
+            match = re.match(b'([^:]+):(.*)', rbuf, re.DOTALL | re.MULTILINE) # look for colon
             if match:
                 lengthStr, rbuf = match.groups()
 
@@ -61,21 +59,56 @@ def framedReceive(sock, debug=0):
             state = MessageReceiveState.ERROR
             if len(rbuf) != 0:
                 print("FramedReceive: incomplete message. \n  state=%s, length=%d, rbuf=%s" % (state, msgLength, rbuf))
-            payload = None # don't return potentially partial message
+            payload = None # don't return partial message
 
         if debug:
             print("FramedReceive: state=%s, length=%d, rbuf=%s" % (state, msgLength, rbuf))
 
     return payload
 
-def fileSend(sock, file, debug=0):
-    # TODO: get file name & length & send
+def fileSend(sock, filename, debug=0):
+    if not os.path.isfile(filename):
+        print("FileSend: file does not exist.")
+        return
+    
+    sendingFile = open(filename, "rb")
+    # send name
+    framedSend(sock, filename.encode(), debug)
 
-    # TODO: send file
-    return
+    # send file
+    fileBytes = sendingFile.read(100)
+    while len(fileBytes) > 0:
+        framedSend(sock, fileBytes, debug)
+        fileBytes = sendingFile.read(100)
 
-def fileReceive(sock, debug=0):
-    # TODO: receive file name and check if exists (if so, send error)
+def fileReceive(sock, directory, debug=0):
+    state = FileReceiveState.NAME
+    filename = None
 
-    # TODO: receive file size and then file, saving to disk
-    return
+    while state != FileReceiveState.COMPLETE and state != FileReceiveState.ERROR:
+        if state == FileReceiveState.NAME: # get filename
+            filename = framedReceive(sock, debug)
+            if filename == None:
+                state = FileReceiveState.ERROR
+                print("FileReceive: unable to read filename. \n")
+            elif os.path.isfile(directory + str(filename.decode())):
+                state = FileReceiveState.ERROR
+                print("FileReceive: file already exists. \n")
+            else:
+                state = FileReceiveState.FILE
+                if debug: print("FileReceive: ready to receive file %s" % (str(filename.decode())))
+        
+        if state == FileReceiveState.FILE: # get file
+            fileBytes = framedReceive(sock, debug)
+            if fileBytes == None or len(fileBytes) == 0:
+                state = FileReceiveState.ERROR
+                print("FileReceive: error receiving file. \n")
+            else:
+                try:
+                    outputFile = open(directory + filename, "wb")
+                    outputFile.write(fileBytes)
+                    outputFile.close()
+                    state = FileReceiveState.COMPLETE
+                except:
+                    state = FileReceiveState.ERROR
+                    print("FileReceive: error writing file. \n")

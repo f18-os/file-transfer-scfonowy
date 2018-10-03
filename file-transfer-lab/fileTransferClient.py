@@ -1,12 +1,12 @@
 #! /usr/bin/env python3
 
 # Echo client program
-import socket, sys, re
+import socket, sys, re, os
 
 sys.path.append("../lib")       # for params
 import params
 
-from fileTransferSocket import framedSend, framedReceive
+from fileTransferSocket import fileSend
 
 
 switchesVarDefaults = (
@@ -57,11 +57,12 @@ if s is None:
     sys.exit(1)
 
 
-print("sending hello world")
-framedSend(s, b"hello world", debug)
-print("received:", framedReceive(s, debug))
-
-print("sending hello world")
-framedSend(s, b"hello world", debug)
-print("received:", framedReceive(s, debug))
-
+command = str(input("Enter 'put <filename>' or 'quit' to exit:"))
+while command != "quit":
+    commands = command.split()
+    if len(commands) != 2 or commands[0] != "put":
+        print("Invalid command.")
+    else:
+        filename = commands[1]
+        fileSend(s, filename, debug)
+    command = str(input("Enter 'put <filename>' or 'quit' to exit:"))
