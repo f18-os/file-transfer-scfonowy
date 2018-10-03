@@ -10,7 +10,7 @@ from fileTransferSocket import fileSend
 
 
 switchesVarDefaults = (
-    (('-s', '--server'), 'server', "127.0.0.1:50000"),
+    (('-s', '--server'), 'server', "127.0.0.1:50001"),
     (('-d', '--debug'), "debug", False), # boolean (set if present)
     (('-?', '--usage'), "usage", False), # boolean (set if present)
     )
@@ -56,13 +56,16 @@ if s is None:
     print('could not open socket')
     sys.exit(1)
 
-
-command = str(input("Enter 'put <filename>' or 'quit' to exit:"))
-while command != "quit":
-    commands = command.split()
-    if len(commands) != 2 or commands[0] != "put":
-        print("Invalid command.")
-    else:
-        filename = commands[1]
-        fileSend(s, filename, debug)
+# REPL
+try:
     command = str(input("Enter 'put <filename>' or 'quit' to exit:"))
+    while command != "quit":
+        commands = command.split() # get filename
+        if len(commands) != 2 or commands[0] != "put":
+            print("Invalid command.")
+        else:
+            filename = commands[1]
+            fileSend(s, filename, debug) # send to server
+        command = str(input("Enter 'put <filename>' or 'quit' to exit:"))
+except Exception as e:
+    print("Session closed, error communicating with server: " + str(e))

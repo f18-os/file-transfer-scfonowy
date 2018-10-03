@@ -39,7 +39,6 @@ while accepting_connections:
         while True:
             # start receipt session
             try:
-                sock.send(b"ready")
                 if debug: print("awaiting file")
                 fileReceive(sock, receiptDirectory, debug)
             except Exception as e:
