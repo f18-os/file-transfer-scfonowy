@@ -10,7 +10,7 @@ from fileTransferSocket import fileSend
 
 
 switchesVarDefaults = (
-    (('-s', '--server'), 'server', "127.0.0.1:50001"),
+    (('-s', '--server'), 'server', "127.0.0.1:50000"),
     (('-d', '--debug'), "debug", False), # boolean (set if present)
     (('-?', '--usage'), "usage", False), # boolean (set if present)
     )

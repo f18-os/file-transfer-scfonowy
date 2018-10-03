@@ -95,12 +95,13 @@ def fileReceive(sock, directory, debug=0):
                 state = FileReceiveState.ERROR
                 print("FileReceive: file already exists. \n")
             else:
+                filename = str(filename.decode())
                 state = FileReceiveState.FILE
-                if debug: print("FileReceive: ready to receive file %s" % (str(filename.decode())))
+                if debug: print("FileReceive: ready to receive file %s" % (filename))
         
         if state == FileReceiveState.FILE: # get file
             fileBytes = framedReceive(sock, debug)
-            if fileBytes == None or len(fileBytes) == 0:
+            if fileBytes == None:
                 state = FileReceiveState.ERROR
                 print("FileReceive: error receiving file. \n")
             else:
@@ -109,6 +110,6 @@ def fileReceive(sock, directory, debug=0):
                     outputFile.write(fileBytes)
                     outputFile.close()
                     state = FileReceiveState.COMPLETE
-                except:
+                except Exception as e:
                     state = FileReceiveState.ERROR
-                    print("FileReceive: error writing file. \n")
+                    print("FileReceive: error writing file: " + str(e))
