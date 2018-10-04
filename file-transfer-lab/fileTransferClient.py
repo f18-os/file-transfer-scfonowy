@@ -65,6 +65,6 @@ try: # loop that prompts for input and puts the passed file on the server
         else:
             filename = commands[1]
             fileSend(s, filename, debug) # send to server
-        command = str(input("Enter 'put <filename>' or 'quit' to exit:"))
+        command = str(input("Enter 'put <filename>' or 'quit' to exit: \n"))
 except Exception as e: # connection w/ server broke somehow
     print("Session closed, error communicating with server: " + str(e))
