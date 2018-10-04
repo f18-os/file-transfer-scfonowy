@@ -70,26 +70,29 @@ def framedReceive(sock, debug=0):
 
 # function that sends a file 100 bytes at a time. sampled from framedSend
 def fileSend(sock, filename, debug=0):
+    # check if file exists
     if not os.path.isfile(filename):
         print("FileSend: file does not exist.")
         return
-    
-    sendingFile = open(filename, "rb")
-    # send name
+
+    # send the name of the file, since we know it exists now
     framedSend(sock, filename.encode(), debug)
 
-    # get name acknowledgement
+    # get name acknowledgement and check if we can proceed with send
     if FileReceiveState(int(framedReceive(sock, debug).decode())) == FileReceiveState.ERROR:
         print("FileSend: unable to send file, file may exist.")
         return
 
-    # get file length
+    # open file and get file length
+    sendingFile = open(filename, "rb")
     fileLength = os.path.getsize(filename)
     if debug: print("file size: " + str(fileLength))
     
-    fileBytes = sendingFile.read(100) # construct header w/ initial send
+    fileBytes = sendingFile.read(100) # construct header w/ initial portion of message
     headerMsg = (str(fileLength) + ":").encode() + fileBytes
     if debug: print("sending header: " + str(headerMsg))
+
+    # send first part of message (length + first chunk)
     sock.send(headerMsg)
 
     # send rest of the file 100 bytes at a time
@@ -106,11 +109,13 @@ def fileSend(sock, filename, debug=0):
     
 # function that receives a file over the network. makes use of framedReceive.
 def fileReceive(sock, directory, debug=0):
-    state = FileReceiveState.NAME
+    # NOTE: this is kind of overengineered. there's no need for a loop here, but i thought
+    # the problem would be more involved than it was, and was too lazy to refactor it. :(
+    state = FileReceiveState.NAME # set first state of 
     filename = None
 
     while state != FileReceiveState.COMPLETE and state != FileReceiveState.ERROR:
-        if state == FileReceiveState.NAME: # get filename
+        if state == FileReceiveState.NAME: # get filename using framedReceive
             filename = framedReceive(sock, debug)
             if filename == None:
                 state = FileReceiveState.ERROR
@@ -123,13 +128,13 @@ def fileReceive(sock, directory, debug=0):
                 state = FileReceiveState.FILE
                 if debug: print("FileReceive: ready to receive file %s" % (filename))
         
-        elif state == FileReceiveState.FILE: # get file
+        elif state == FileReceiveState.FILE: # get file using framedReceive
             fileBytes = framedReceive(sock, debug)
             if fileBytes == None:
                 state = FileReceiveState.ERROR
                 print("FileReceive: error receiving file. \n")
             else:
-                try:
+                try: # write file to system
                     outputFile = open(directory + filename, "wb")
                     outputFile.write(fileBytes)
                     outputFile.close()

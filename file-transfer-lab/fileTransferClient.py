@@ -1,11 +1,10 @@
 #! /usr/bin/env python3
 
+### BEGIN PROVIDED CODE BLOCK
 # Echo client program
 import socket, sys, re, os
-
 sys.path.append("../lib")       # for params
 import params
-
 from fileTransferSocket import fileSend
 
 
@@ -55,10 +54,10 @@ for res in socket.getaddrinfo(serverHost, serverPort, socket.AF_UNSPEC, socket.S
 if s is None:
     print('could not open socket')
     sys.exit(1)
+### END PROVIDED CODE BLOCK
 
-# REPL
-try:
-    command = str(input("Enter 'put <filename>' or 'quit' to exit:"))
+try: # loop that prompts for input and puts the passed file on the server
+    command = str(input("Enter 'put <filename>' or 'quit' to exit: \n"))
     while command != "quit":
         commands = command.split() # get filename
         if len(commands) != 2 or commands[0] != "put":
@@ -67,5 +66,5 @@ try:
             filename = commands[1]
             fileSend(s, filename, debug) # send to server
         command = str(input("Enter 'put <filename>' or 'quit' to exit:"))
-except Exception as e:
+except Exception as e: # connection w/ server broke somehow
     print("Session closed, error communicating with server: " + str(e))
