@@ -1,4 +1,4 @@
-import re, os, time
+import re, os
 from enum import Enum
 
 # enum for what state we're in when receiving a file
